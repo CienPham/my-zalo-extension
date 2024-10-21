@@ -1,0 +1,32 @@
+{
+  "manifest_version": 3,
+  "name": "Zalo Friends List",
+  "version": "1.4",
+  "description": "Hiển thị danh sách bạn bè từ IndexedDB của Zalo Web và điều chỉnh giao diện.",
+  "permissions": ["storage", "activeTab", "scripting"],
+  "action": {
+    "default_icon": {
+      "16": "image/icon.png",
+      "48": "image/icon.png",
+      "128": "image/icon.png"
+    }
+  },
+  "host_permissions": [
+    "https://chat.zalo.me/*"
+  ],
+  "content_scripts": [
+    {
+      "matches": ["https://chat.zalo.me/*"],
+      "js": ["content.js"]
+    }
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "web_accessible_resources": [
+    {
+      "resources": ["extension-ui.html"],
+      "matches": ["https://chat.zalo.me/*"]
+    }
+  ]
+}
