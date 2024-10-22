@@ -17,7 +17,7 @@
   "content_scripts": [
     {
       "matches": ["https://chat.zalo.me/*"],
-      "js": ["content.js"]
+      "js": ["content.js"] 
     }
   ],
   "background": {
@@ -25,7 +25,7 @@
   },
   "web_accessible_resources": [
     {
-      "resources": ["extension-ui.html"],
+      "resources": ["extension-ui.html", "css/styles.css"],
       "matches": ["https://chat.zalo.me/*"]
     }
   ]

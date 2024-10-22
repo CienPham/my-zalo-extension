@@ -113,6 +113,10 @@ function displayFriends(friends) {
     }
 }
 
+// Hàm hiển thị danh sách Groub
+function displayGroub(groub) {}
+
+
 // Hàm hiển thị lỗi
 function displayError(error) {
     const extensionContainer = document.getElementById('extension-container');
