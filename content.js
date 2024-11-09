@@ -4,31 +4,30 @@ function getFriendsFromIndexedDB() {
         const dbName = "zdb_136943695786069414"; // Đảm bảo đây là tên đúng của database
         const dbRequest = indexedDB.open(dbName);
 
-        dbRequest.onerror = function(event) {
-            console.error("Lỗi khi mở IndexedDB:", event.target.error);
-            reject("Không thể mở IndexedDB");
-        };
-
         dbRequest.onsuccess = function(event) {
             const db = event.target.result;
-            if (!db.objectStoreNames.contains("friend")) {
-                console.error("Không tìm thấy object store 'friend'");
-                reject("Không tìm thấy dữ liệu bạn bè");
-                return;
-            }
-
             const transaction = db.transaction("friend", "readonly");
             const objectStore = transaction.objectStore("friend");
             const getAllRequest = objectStore.getAll();
-
-            getAllRequest.onerror = function(event) {
-                console.error("Lỗi khi truy xuất dữ liệu:", event.target.error);
-                reject("Không thể lấy dữ liệu bạn bè");
-            };
-
             getAllRequest.onsuccess = function(event) {
                 const friends = event.target.result;
                 resolve(friends);
+            };
+        };
+    });
+}
+function getGroupsFromIndexedDB() {
+    return new Promise((resolve, reject) => {
+        const dbName = "zdb_136943695786069414";
+        const dbRequest = indexedDB.open(dbName);
+        dbRequest.onsuccess = function(event) {
+            const db = event.target.result;
+            const transaction = db.transaction("group", "readonly");
+            const objectStore = transaction.objectStore("group");
+            const getAllRequest = objectStore.getAll();
+            getAllRequest.onsuccess = function(event) {
+                const groups = event.target.result;
+                resolve(groups);
             };
         };
     });
@@ -61,10 +60,13 @@ function adjustLayout(active) {
                         extensionContainer.innerHTML = data;
                         // Thêm lớp 'show' sau một khoảng thời gian ngắn để kích hoạt animation
                         setTimeout(() => extensionContainer.classList.add('show'), 50);
-                        return getFriendsFromIndexedDB();
+
+                        // Sau khi tải xong nội dung, lấy cả bạn bè và nhóm
+                        return Promise.all([getFriendsFromIndexedDB(), getGroupsFromIndexedDB()]);
                     })
-                    .then(friends => {
-                        displayFriends(friends);
+                    .then(([friends, groups]) => {
+                        displayFriends(friends);  // Hiển thị danh sách bạn bè
+                        displayGroups(groups);    // Hiển thị danh sách nhóm
                     })
                     .catch(error => {
                         console.error("Lỗi:", error);
@@ -91,6 +93,7 @@ function adjustLayout(active) {
         }
     }
 }
+
 // Hàm hiển thị danh sách bạn bè
 function displayFriends(friends) {
     const tableBody = document.querySelector('#friendsTable tbody');
@@ -113,8 +116,26 @@ function displayFriends(friends) {
     }
 }
 
-// Hàm hiển thị danh sách Groub
-function displayGroub(groub) {}
+function displayGroups(groups) {
+    const tableBody = document.querySelector('#groupsTable tbody');
+    if (tableBody) {
+        tableBody.innerHTML = '';
+        if (groups && groups.length > 0) {
+            groups.forEach((group, index) => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${index + 1}</td>
+                    <td>${group.userId || 'N/A'}</td>
+                    <td>${group.displayName || 'N/A'}</td>
+                `;
+                tableBody.appendChild(row);
+            });
+        } else {
+            tableBody.innerHTML = '<tr><td colspan="3">Không tìm thấy dữ liệu nhóm</td></tr>';
+        }
+    }
+}
+
 
 
 // Hàm hiển thị lỗi

@@ -6,9 +6,29 @@
     <title>Danh sách bạn bè Zalo</title>
     <link rel="stylesheet" href="chrome-extension://ffhabmhgmellpbnadhfhbgoplfijjhkk/css/styles.css">
 </head>
+
+<select id="cars">
+    <option value="Friend$Groub">Bạn bè và Nhóm</option>
+    <option value="Friend">Bạn bè</option>
+    <option value="AllGroub">Tất cả nhóm </option>
+    <option value="IsGroubAdmin">Nhóm là Admin</option>
+    <option value="IsNotGroubAdmin">Nhóm không là Admin</option>
+  </select>
 <body>
     <h2>Danh sách bạn bè</h2>
     <table id="friendsTable">
+        <thead>
+            <tr>
+                <th>#</th>
+                <th>UserId</th>
+                <th>Tên hiển thị</th>
+            </tr>
+        </thead>
+        <tbody>
+            <!-- Dữ liệu bạn bè sẽ được thêm vào đây bằng JavaScript -->
+        </tbody>
+    </table>
+    <table id="groupsTable">
         <thead>
             <tr>
                 <th>#</th>
