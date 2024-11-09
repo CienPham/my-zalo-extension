@@ -1,34 +1,14 @@
-// Hàm lấy dữ liệu từ IndexedDB của Zalo Web
-function getFriendsFromIndexedDB() {
-    return new Promise((resolve, reject) => {
-        const dbName = "zdb_136943695786069414"; // Đảm bảo đây là tên đúng của database
-        const dbRequest = indexedDB.open(dbName);
-
-        dbRequest.onsuccess = function(event) {
-            const db = event.target.result;
-            const transaction = db.transaction("friend", "readonly");
-            const objectStore = transaction.objectStore("friend");
-            const getAllRequest = objectStore.getAll();
-            getAllRequest.onsuccess = function(event) {
-                const friends = event.target.result;
-                resolve(friends);
-            };
-        };
-    });
-}
-function getGroupsFromIndexedDB() {
-    return new Promise((resolve, reject) => {
+// Hàm lấy dữ liệu từ IndexedDB
+function getDataFromIndexedDB(storeName) {
+    return new Promise((resolve) => {
         const dbName = "zdb_136943695786069414";
         const dbRequest = indexedDB.open(dbName);
-        dbRequest.onsuccess = function(event) {
+        
+        dbRequest.onsuccess = (event) => {
             const db = event.target.result;
-            const transaction = db.transaction("group", "readonly");
-            const objectStore = transaction.objectStore("group");
-            const getAllRequest = objectStore.getAll();
-            getAllRequest.onsuccess = function(event) {
-                const groups = event.target.result;
-                resolve(groups);
-            };
+            const transaction = db.transaction(storeName, "readonly");
+            const objectStore = transaction.objectStore(storeName);
+            objectStore.getAll().onsuccess = (event) => resolve(event.target.result);
         };
     });
 }
@@ -36,131 +16,187 @@ function getGroupsFromIndexedDB() {
 // Hàm điều chỉnh giao diện
 function adjustLayout(active) {
     const zaloContainer = document.querySelector('div#container.flx.WEB');
-    if (zaloContainer) {
-        if (active) {
-            let extensionContainer = document.getElementById('extension-container');
-            if (!extensionContainer) {
-                extensionContainer = document.createElement('div');
-                extensionContainer.id = 'extension-container';
-                extensionContainer.style.width = '45%';
-                extensionContainer.style.height = '100%';
-                extensionContainer.style.position = 'fixed';
-                extensionContainer.style.top = '0';
-                extensionContainer.style.right = '0';
-                extensionContainer.style.zIndex = '9999';
-                extensionContainer.style.backgroundColor = 'white';
-                extensionContainer.style.boxShadow = '-2px 0 5px rgba(0,0,0,0.1)';
-                extensionContainer.style.overflow = 'auto';
-                document.body.appendChild(extensionContainer);
+    if (!zaloContainer) return;
 
-                // Tải nội dung từ file HTML
-                fetch(chrome.runtime.getURL('extension-ui.html'))
-                    .then(response => response.text())
-                    .then(data => {
-                        extensionContainer.innerHTML = data;
-                        // Thêm lớp 'show' sau một khoảng thời gian ngắn để kích hoạt animation
-                        setTimeout(() => extensionContainer.classList.add('show'), 50);
-
-                        // Sau khi tải xong nội dung, lấy cả bạn bè và nhóm
-                        return Promise.all([getFriendsFromIndexedDB(), getGroupsFromIndexedDB()]);
-                    })
-                    .then(([friends, groups]) => {
-                        displayFriends(friends);  // Hiển thị danh sách bạn bè
-                        displayGroups(groups);    // Hiển thị danh sách nhóm
-                    })
-                    .catch(error => {
-                        console.error("Lỗi:", error);
-                        displayError(error);
-                    });
-            } else {
-                extensionContainer.classList.add('show');
-            }
-
-            // Thay đổi chiều rộng của container Zalo với animation
-            zaloContainer.style.width = '54%';
-            zaloContainer.style.transition = 'width 0.3s ease-out';
-        } else {
-            let extensionContainer = document.getElementById('extension-container');
-            if (extensionContainer) {
-                extensionContainer.classList.remove('show');
-                // Xóa container sau khi animation kết thúc
-                setTimeout(() => extensionContainer.remove(), 300);
-            }
-
-            // Khôi phục chiều rộng của container Zalo với animation
-            zaloContainer.style.width = '100%';
-            zaloContainer.style.transition = 'width 0.3s ease-out';
+    const extensionContainer = document.getElementById('extension-container') || createExtensionContainer();
+    
+    if (active) {
+        if (!document.contains(extensionContainer)) {
+            document.body.appendChild(extensionContainer);
+            loadExtensionContent(extensionContainer);
         }
+        extensionContainer.classList.add('show');
+        zaloContainer.style.width = '54%';
+    } else {
+        extensionContainer.classList.remove('show');
+        setTimeout(() => extensionContainer.remove(), 300);
+        zaloContainer.style.width = '100%';
     }
 }
 
-// Hàm hiển thị danh sách bạn bè
-function displayFriends(friends) {
-    const tableBody = document.querySelector('#friendsTable tbody');
-    if (tableBody) {
-        tableBody.innerHTML = '';
-
-        if (friends && friends.length > 0) {
-            friends.forEach((friend, index) => {
-                const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td>${index + 1}</td>
-                    <td>${friend.userId || 'N/A'}</td>
-                    <td>${friend.displayName || 'N/A'}</td>
-                `;
-                tableBody.appendChild(row);
-            });
-        } else {
-            tableBody.innerHTML = '<tr><td colspan="3">Không tìm thấy dữ liệu bạn bè</td></tr>';
-        }
-    }
+// Tạo container cho extension
+function createExtensionContainer() {
+    const container = document.createElement('div');
+    container.id = 'extension-container';
+    Object.assign(container.style, {
+        width: '45%',
+        height: '100%',
+        position: 'fixed',
+        top: '0',
+        right: '0',
+        zIndex: '9999',
+        backgroundColor: 'white',
+        boxShadow: '-2px 0 5px rgba(0,0,0,0.1)',
+        overflow: 'auto',
+        transition: 'transform 0.3s ease-out'
+    });
+    return container;
 }
 
-function displayGroups(groups) {
-    const tableBody = document.querySelector('#groupsTable tbody');
-    if (tableBody) {
-        tableBody.innerHTML = '';
-        if (groups && groups.length > 0) {
-            groups.forEach((group, index) => {
-                const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td>${index + 1}</td>
-                    <td>${group.userId || 'N/A'}</td>
-                    <td>${group.displayName || 'N/A'}</td>
-                `;
-                tableBody.appendChild(row);
-            });
-        } else {
-            tableBody.innerHTML = '<tr><td colspan="3">Không tìm thấy dữ liệu nhóm</td></tr>';
-        }
+// Hàm hiển thị dữ liệu trong bảng
+function displayCombinedData(data, type) {
+    const tableBody = document.querySelector('#listAll tbody');
+    if (!tableBody) return;
+
+    if (!data || data.length === 0) {
+        tableBody.innerHTML = '<tr><td colspan="5">Không tìm thấy dữ liệu</td></tr>';
+        return;
     }
-}
 
-
-
-// Hàm hiển thị lỗi
-function displayError(error) {
-    const extensionContainer = document.getElementById('extension-container');
-    if (extensionContainer) {
-        extensionContainer.innerHTML = `
-            <div style="padding: 20px; color: red;">
-                <h2>Đã xảy ra lỗi</h2>
-                <p>${error}</p>
-            </div>
+    let htmlContent = '';
+    data.forEach((item, index) => {
+        const isFriend = type === 'friend' || item.type === 'friend';
+        htmlContent += `
+            <tr>
+                <td>${index + 1}</td>
+                <td>
+                    <span class="type-badge ${isFriend ? 'type-friend' : 'type-group'}">
+                        ${isFriend ? 'Bạn bè' : 'Nhóm'}
+                    </span>
+                </td>
+                <td>${item.userId || 'N/A'}</td>
+                <td>${item.displayName || 'N/A'}</td>
+                <td>${isFriend ? '-' : (item.isAdmin ? 'Admin' : 'Thành viên')}</td>
+            </tr>
         `;
+    });
+
+    tableBody.innerHTML = htmlContent;
+}
+
+// Hàm cập nhật hiển thị dựa trên lựa chọn
+function updateDisplay(friends, groups, selectedValue) {
+    switch(selectedValue) {
+        case 'Friend$Group':
+            const combinedData = [
+                ...friends.map(friend => ({ ...friend, type: 'friend' })),
+                ...groups.map(group => ({ ...group, type: 'group' }))
+            ];
+            displayCombinedData(combinedData, 'mixed');
+            break;
+            
+        case 'Friend':
+            displayCombinedData(friends, 'friend');
+            break;
+            
+        case 'AllGroup':
+            displayCombinedData(groups, 'group');
+            break;
+            
+        case 'IsGroupAdmin':
+            const adminGroups = groups.filter(group => group.isAdmin);
+            displayCombinedData(adminGroups, 'group');
+            break;
+            
+        case 'IsNotGroupAdmin':
+            const nonAdminGroups = groups.filter(group => !group.isAdmin);
+            displayCombinedData(nonAdminGroups, 'group');
+            break;
     }
 }
 
-// Lắng nghe sự kiện từ background script
+// Thêm tính năng tìm kiếm
+function addSearchFeature() {
+    const searchInput = document.createElement('input');
+    Object.assign(searchInput, {
+        type: 'text',
+        placeholder: 'Tìm kiếm...',
+        className: 'search-input'
+    });
+    Object.assign(searchInput.style, {
+        margin: '0 0 20px 20px',
+        padding: '8px',
+        width: '200px',
+        borderRadius: '4px',
+        border: '1px solid #ddd'
+    });
+    
+    const selectElement = document.getElementById('dataSelect');
+    selectElement.parentNode.insertBefore(searchInput, selectElement.nextSibling);
+    
+    searchInput.addEventListener('input', (e) => {
+        const searchTerm = e.target.value.toLowerCase();
+        const rows = document.querySelectorAll('#listAll tbody tr');
+        
+        rows.forEach(row => {
+            const text = row.textContent.toLowerCase();
+            row.style.display = text.includes(searchTerm) ? '' : 'none';
+        });
+    });
+}
+
+// Khởi tạo listener cho select
+function initializeSelectListener(friends, groups) {
+    const dataSelect = document.getElementById('dataSelect');
+    if (!dataSelect) return;
+
+    dataSelect.addEventListener('change', (e) => {
+        updateDisplay(friends, groups, e.target.value);
+    });
+    
+    // Hiển thị mặc định khi tải trang
+    updateDisplay(friends, groups, dataSelect.value);
+}
+
+// Load nội dung extension
+async function loadExtensionContent(container) {
+    try {
+        const htmlContent = await fetch(chrome.runtime.getURL('extension-ui.html')).then(r => r.text());
+        container.innerHTML = htmlContent;
+        setTimeout(() => container.classList.add('show'), 50);
+
+        const [friends, groups] = await Promise.all([
+            getDataFromIndexedDB('friend'),
+            getDataFromIndexedDB('group')
+        ]);
+
+        // Khởi tạo listener cho select và hiển thị dữ liệu mặc định
+        initializeSelectListener(friends, groups);
+        // Thêm tính năng tìm kiếm
+        addSearchFeature();
+    } catch (error) {
+        displayError(container, error);
+    }
+}
+
+// Hiển thị lỗi
+function displayError(container, error) {
+    container.innerHTML = `
+        <div style="padding: 20px; color: red;">
+            <h2>Đã xảy ra lỗi</h2>
+            <p>${error}</p>
+        </div>
+    `;
+}
+
+// Event listeners
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     if (request.action === "toggleExtension") {
         adjustLayout(request.state);
     }
 });
 
-// Kiểm tra trạng thái extension khi trang được tải
+// Khởi tạo
 chrome.storage.local.get(['extensionActive'], (result) => {
-    if (result.extensionActive) {
-        adjustLayout(true);
-    }
+    if (result.extensionActive) adjustLayout(true);
 });
