@@ -1,4 +1,4 @@
-// Hàm lấy dữ liệu từ IndexedDB
+// Hàm lấy dữ liệu từ IndexedDB với logic admin mới
 async function getDataFromIndexedDB(storeName) {
     return new Promise(async (resolve, reject) => {
         try {
@@ -8,16 +8,31 @@ async function getDataFromIndexedDB(storeName) {
                 reject("Không tìm thấy database nào có tên bắt đầu với 'zdb_'");
                 return;
             }
+            
+            // Lấy userId từ tên database
             const dbName = dbInfo.name;
+            const currentUserId = dbName.split('zdb_')[1];
+            
             const dbRequest = indexedDB.open(dbName);
             dbRequest.onsuccess = (event) => {
                 const db = event.target.result;
                 const transaction = db.transaction(storeName, "readonly");
                 const objectStore = transaction.objectStore(storeName);
                 
-                // Lấy tất cả dữ liệu trong object store
                 const request = objectStore.getAll();
-                request.onsuccess = (event) => resolve(event.target.result);
+                request.onsuccess = (event) => {
+                    let data = event.target.result;
+                    
+                    // Nếu là store group, cập nhật trạng thái admin
+                    if (storeName === 'group') {
+                        data = data.map(group => ({
+                            ...group,
+                            isAdmin: group.creatorId === currentUserId
+                        }));
+                    }
+                    
+                    resolve(data);
+                };
                 request.onerror = (event) => reject(event.target.error);
             };
             dbRequest.onerror = (event) => {
@@ -68,7 +83,7 @@ function createExtensionContainer() {
 }
 
 // Hàm hiển thị dữ liệu trong bảng
-function displayCombinedData(data, type) {
+ function displayCombinedData(data, type) {
     const tableBody = document.querySelector('#listAll tbody');
     if (!tableBody) return;
 
