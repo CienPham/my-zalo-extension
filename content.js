@@ -1,15 +1,31 @@
 // Hàm lấy dữ liệu từ IndexedDB
-function getDataFromIndexedDB(storeName) {
-    return new Promise((resolve) => {
-        const dbName = "zdb_136943695786069414";
-        const dbRequest = indexedDB.open(dbName);
-        
-        dbRequest.onsuccess = (event) => {
-            const db = event.target.result;
-            const transaction = db.transaction(storeName, "readonly");
-            const objectStore = transaction.objectStore(storeName);
-            objectStore.getAll().onsuccess = (event) => resolve(event.target.result);
-        };
+async function getDataFromIndexedDB(storeName) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            const databases = await indexedDB.databases();
+            const dbInfo = databases.find(db => db.name.startsWith("zdb_"));          
+            if (!dbInfo) {
+                reject("Không tìm thấy database nào có tên bắt đầu với 'zdb_'");
+                return;
+            }
+            const dbName = dbInfo.name;
+            const dbRequest = indexedDB.open(dbName);
+            dbRequest.onsuccess = (event) => {
+                const db = event.target.result;
+                const transaction = db.transaction(storeName, "readonly");
+                const objectStore = transaction.objectStore(storeName);
+                
+                // Lấy tất cả dữ liệu trong object store
+                const request = objectStore.getAll();
+                request.onsuccess = (event) => resolve(event.target.result);
+                request.onerror = (event) => reject(event.target.error);
+            };
+            dbRequest.onerror = (event) => {
+                reject(event.target.error);
+            };
+        } catch (error) {
+            reject(error);
+        }
     });
 }
 
@@ -17,9 +33,7 @@ function getDataFromIndexedDB(storeName) {
 function adjustLayout(active) {
     const zaloContainer = document.querySelector('div#container.flx.WEB');
     if (!zaloContainer) return;
-
     const extensionContainer = document.getElementById('extension-container') || createExtensionContainer();
-    
     if (active) {
         if (!document.contains(extensionContainer)) {
             document.body.appendChild(extensionContainer);
