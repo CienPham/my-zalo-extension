@@ -1,6 +1,7 @@
 .container {
   margin: 20px;
 }
+
 #dataSelect {
   margin-bottom: 20px;
   padding: 8px;
@@ -40,6 +41,13 @@
 .type-group {
   background-color: #e8f5e9;
   color: #388e3c;
+}
+
+.table-content {
+  max-height: 400px; /* Thiết lập chiều cao tối đa cho vùng cuộn */
+  overflow-y: auto; /* Bật cuộn dọc */
+  border: 1px solid #ddd;
+  border-radius: 4px;
 }
 
 #extension-container {
